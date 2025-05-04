@@ -1,38 +1,41 @@
-import { useEffect, useState } from "react";
+import React, { useState } from 'react';
 
-export default function Navbar() {
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    fetch("http://localhost:3001/auth/user", {
-      credentials: "include"
-    })
-      .then(res => res.json())
-      .then(data => setUser(data));
-  }, []);
-
-  const logout = () => {
-    fetch("http://localhost:3001/auth/logout", {
-      credentials: "include"
-    }).then(() => setUser(null));
-  };
+const Navbar = () => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <nav className="bg-gray-800 px-4 py-3 shadow">
-      <div className="container mx-auto flex justify-between items-center">
-        <a href="/" className="text-xl font-bold text-white">Octra Bot</a>
-        <div>
-          {user ? (
-            <div className="flex items-center gap-2">
-              <img src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`} alt="avatar" className="w-8 h-8 rounded-full" />
-              <span className="text-white">{user.username}</span>
-              <button onClick={logout} className="ml-2 text-sm text-gray-300 hover:text-white">Logout</button>
-            </div>
-          ) : (
-            <a href="https://discord.com/oauth2/authorize?client_id=1363531532127437003&response_type=code&redirect_uri=https%3A%2F%2Foctra-bot.vercel.app%2F&scope=identify" className="text-white">Login</a>
-          )}
+    <nav className="bg-gray-900 p-4 shadow-md fixed w-full top-0 left-0 z-50">
+      <div className="flex justify-between items-center">
+        <div className="text-white text-2xl font-semibold">Octra Bot</div>
+        
+        {/* Hamburger Menu for Mobile */}
+        <button
+          className="lg:hidden text-white"
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+        >
+          <i className="fas fa-bars"></i>
+        </button>
+
+        {/* Menu Items */}
+        <div className={`lg:flex space-x-6 ${isMenuOpen ? 'block' : 'hidden'}`}>
+          <a href="#" className="text-white hover:text-blue-500 transition-all duration-300">Home</a>
+          <a href="#" className="text-white hover:text-blue-500 transition-all duration-300">Features</a>
+          <a href="#" className="text-white hover:text-blue-500 transition-all duration-300">Pricing</a>
+          <a href="#" className="text-white hover:text-blue-500 transition-all duration-300">Support</a>
+        </div>
+
+        {/* User info */}
+        <div className="flex items-center space-x-4">
+          <div className="text-white">Hello, User!</div>
+          <img
+            className="h-10 w-10 rounded-full"
+            src="https://cdn.discordapp.com/avatars/USER_ID/AVATAR.png"
+            alt="User Avatar"
+          />
         </div>
       </div>
     </nav>
   );
-}
+};
+
+export default Navbar;
