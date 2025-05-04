@@ -29,7 +29,7 @@ export default function Navbar() {
               <button onClick={logout} className="ml-2 text-sm text-gray-300 hover:text-white">Logout</button>
             </div>
           ) : (
-            <a href="http://localhost:3001/auth/discord" className="text-white">Login</a>
+            <a href="https://discord.com/oauth2/authorize?client_id=1363531532127437003&response_type=code&redirect_uri=https%3A%2F%2Foctra-bot.vercel.app%2F&scope=identify" className="text-white">Login</a>
           )}
         </div>
       </div>
