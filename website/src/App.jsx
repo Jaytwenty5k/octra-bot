@@ -1,17 +1,39 @@
-import { Routes, Route } from "react-router-dom";
-import Navbar from "./components/Navbar";
-import Home from "./pages/Home";
-import Login from "./pages/Login";
-import { Analytics } from "@vercel/analytics/react"
+import React, { useState, useEffect } from 'react';
 
-export default function App() {
+function App() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    // URL-Parameter auslesen
+    const params = new URLSearchParams(window.location.search);
+    const username = params.get('username');
+    const avatar = params.get('avatar');
+
+    if (username && avatar) {
+      setUser({ username, avatar });
+    }
+  }, []);
+
+  if (!user) {
+    return <button onClick={loginWithDiscord}>Login mit Discord</button>;
+  }
+
   return (
-      <div className="min-h-screen bg-gray-900 text-white">
-            <Navbar />
-                  <Routes>
-                          <Route path="/" element={<Home />} />
-                                  <Route path="/login" element={<Login />} />
-                                        </Routes>
-                                            </div>
-                                              );
-                                              }
+    <div>
+      <nav>
+        <p>Willkommen, {user.username}!</p>
+        <img
+          src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`}
+          alt={`${user.username}'s Avatar`}
+        />
+      </nav>
+    </div>
+  );
+}
+
+const loginWithDiscord = () => {
+  window.location.href =
+    'https://discord.com/oauth2/authorize?client_id=1363531532127437003&response_type=code&redirect_uri=https%3A%2F%2Foctra-bot.vercel.app%2F&scope=identify';
+};
+
+export default App;
