@@ -1,60 +1,61 @@
 import express from 'express';
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
+import axios from 'axios';
 import dotenv from 'dotenv';
+
 dotenv.config(); // Lädt Umgebungsvariablen aus der .env Datei
 
 const app = express();
-app.use(express.json()); // Für das Parsen von JSON-Daten im Body
 
-// Hardcoded Benutzer für das Beispiel
-const users = [
-  {
-    id: 1,
-    username: 'testuser',
-    password: '$2a$10$QFpnA3O8ZQ.JYo.DMtOLOQHeZmVKZk0Hgcf7Hvv5zzK.d1om.x9ua', // Beispiel für das gehashte Passwort 'password123'
-  }
-];
+// Discord OAuth2 Client-ID und Secret
+const CLIENT_ID = process.env.DISCORD_CLIENT_ID;
+const CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
+const REDIRECT_URI = process.env.DISCORD_REDIRECT_URI;  // Beispiel: http://localhost:5000/discord/callback
 
-// JWT-Secret (kann in der .env-Datei gespeichert werden)
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
-
-// Login-Endpunkt
-app.post('/login', async (req, res) => {
-  const { username, password } = req.body;
-
-  // Suche den Benutzer
-  const user = users.find(u => u.username === username);
-  if (!user) {
-    return res.status(400).json({ message: 'Benutzer nicht gefunden' });
-  }
-
-  // Überprüfe das Passwort
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) {
-    return res.status(400).json({ message: 'Falsches Passwort' });
-  }
-
-  // Erstelle ein JWT
-  const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '1h' });
-
-  // Sende das JWT zurück
-  res.json({ token });
+// Schritt 1: Weiterleitung zu Discords OAuth2
+app.get('/discord/login', (req, res) => {
+  const redirectUrl = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=identify`;
+  res.redirect(redirectUrl);
 });
 
-// Authentifizierung prüfen (Schutz-Endpunkt)
-app.get('/profile', (req, res) => {
-  const token = req.headers['authorization']?.split(' ')[1]; // Bearer Token
+// Schritt 2: Callback von Discord nach der Autorisierung
+app.get('/discord/callback', async (req, res) => {
+  const { code } = req.query;
 
-  if (!token) {
-    return res.status(403).json({ message: 'Keine Authentifizierung' });
-  }
-
+  // Tausche den Code gegen ein Access-Token
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    res.json({ message: 'Zugriff gewährt', userId: decoded.userId });
+    const response = await axios.post('https://discord.com/api/oauth2/token', null, {
+      params: {
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        grant_type: 'authorization_code',
+        code: code,
+        redirect_uri: REDIRECT_URI,
+        scope: 'identify',
+      },
+    });
+
+    const { access_token } = response.data;
+
+    // Mit dem Access-Token benutzerdaten abrufen
+    const userData = await axios.get('https://discord.com/api/users/@me', {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+    });
+
+    // Speichere das Access-Token und Benutzerdaten in der Sitzung oder sende sie im Response zurück
+    // Hier speichern wir es als Token in der Session (Optional: Kann auch im Frontend gespeichert werden)
+    req.session.access_token = access_token;
+
+    // Benutzername und Profilbild an den Client senden
+    res.json({
+      username: userData.data.username,
+      avatarUrl: `https://cdn.discordapp.com/avatars/${userData.data.id}/${userData.data.avatar}.png`,
+    });
+
   } catch (error) {
-    res.status(401).json({ message: 'Ungültiges Token' });
+    console.error('Error during Discord authentication:', error);
+    res.status(500).json({ message: 'Fehler bei der Authentifizierung' });
   }
 });
 
