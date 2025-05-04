@@ -1,8 +1,57 @@
-export default function Login() {
-    return (
-      <div className="p-4">
-        <h1 className="text-2xl font-semibold">Login</h1>
-        <p className="mt-2 text-gray-300">Login-Seite kommt bald...</p>
-      </div>
-    );
-  }
+// src/pages/Login.jsx
+
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+const Login = () => {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+
+    const response = await fetch('http://localhost:5000/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ username, password }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      // Token speichern
+      localStorage.setItem('token', data.token);
+      navigate('/profile'); // Umleitung nach dem Login
+    } else {
+      setError(data.message || 'Etwas ist schief gelaufen');
+    }
+  };
+
+  return (
+    <div>
+      <h1>Login</h1>
+      <form onSubmit={handleLogin}>
+        <input
+          type="text"
+          placeholder="Benutzername"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+        />
+        <input
+          type="password"
+          placeholder="Passwort"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <button type="submit">Einloggen</button>
+      </form>
+      {error && <p>{error}</p>}
+    </div>
+  );
+};
+
+export default Login;
