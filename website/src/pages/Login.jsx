@@ -12,7 +12,7 @@ const Login = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    const response = await fetch('http://localhost:5000/login', {
+    const response = await fetch('https://discord.com/oauth2/authorize?client_id=1363531532127437003&response_type=code&redirect_uri=https%3A%2F%2Foctra-bot.vercel.app%2F&scope=identify', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
