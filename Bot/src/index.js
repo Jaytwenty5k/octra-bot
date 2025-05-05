@@ -51,4 +51,3 @@ client.on('interactionCreate', async (interaction) => {
                                                                                                                                                                                                       await interaction.update({ content: `Du hast erfolgreich ein ${buildingType === 'windmill' ? 'Windrad' : 'Solaranlage'} gekauft!`, components: [] });
                                                                                                                                                                                                         }
                                                                                                                                                                                                         });
-1
