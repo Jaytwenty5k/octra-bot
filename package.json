@@ -1,6 +1,5 @@
 {
   "type": "module",
-  
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",
     "@vercel/analytics": "^1.5.0",
