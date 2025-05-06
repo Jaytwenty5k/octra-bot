@@ -1,11 +1,18 @@
-import { SlashCommandBuilder } from 'discord.js';
-import { supabase } from '../utils/supabaseClient.js';
+import pkg from 'discord.js';
+const {
+  SlashCommandBuilder,
+  MessageEmbed,
+  MessageButton,
+  ActionRowBuilder,
+  EmbedBuilder // Falls du Buttons verwendest
+} = pkg;
+import { supabase } from '../../utils/supabaseClient.js';
 
 export default {
   data: new SlashCommandBuilder()
     .setName('work')
     .setDescription('Arbeite und verdiene Einkommen + XP'),
-
+    
   async execute(interaction) {
     const userId = interaction.user.id;
 
@@ -15,7 +22,6 @@ export default {
       .select('job_id')
       .eq('discord_id', userId)
       .single();
-
     if (jobError || !userJob) {
       return interaction.reply({ content: 'Du hast noch keinen Job! Nutze /setjob, um einen Job auszuwählen.', ephemeral: true });
     }
@@ -26,7 +32,6 @@ export default {
       .select('*')
       .eq('id', userJob.job_id)
       .single();
-
     if (jobDataError || !jobData) {
       return interaction.reply({ content: 'Fehler beim Abrufen deines Jobs.', ephemeral: true });
     }
@@ -40,7 +45,7 @@ export default {
     let newXP = jobData.job_xp + 20; // Beispiel: XP pro Arbeitseinheit
     let newLevel = jobData.job_level;
     let newXPToLevel = jobData.xp_to_level;
-
+    
     if (newXP >= newXPToLevel) {
       newXP -= newXPToLevel;
       newLevel += 1;
@@ -48,7 +53,7 @@ export default {
     }
 
     // Update Job-Daten in der Datenbank
-    await supabase
+    const { error: updateError } = await supabase
       .from('jobs')
       .update({
         job_xp: newXP,
@@ -56,6 +61,20 @@ export default {
         xp_to_level: newXPToLevel
       })
       .eq('id', userJob.job_id);
+    if (updateError) {
+      return interaction.reply({ content: 'Fehler beim Aktualisieren der Job-Daten.', ephemeral: true });
+    }
+
+    // Füge Einkommen dem Benutzerkonto hinzu
+    const { error: incomeError } = await supabase
+      .from('wallets')
+      .upsert({
+        discord_id: userId,
+        balance: income // Einkommen wird zum Benutzerkonto hinzugefügt
+      });
+    if (incomeError) {
+      return interaction.reply({ content: 'Fehler beim Hinzufügen des Einkommens.', ephemeral: true });
+    }
 
     // Antwort an den Benutzer
     interaction.reply(`Du hast gearbeitet und ${income}€ verdient! Dein Job-Level ist jetzt ${newLevel}.`);

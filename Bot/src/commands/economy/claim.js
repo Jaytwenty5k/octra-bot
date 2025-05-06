@@ -1,77 +1,87 @@
-import { SlashCommandBuilder } from 'discord.js';
-import { supabase } from '../../supabase/supabase.js';
+import pkg from 'discord.js';
+const {
+  SlashCommandBuilder,
+  EmbedBuilder,
+  ActionRowBuilder,
+} = pkg;
+import { supabase } from '../../utils/supabaseClient.js';
 
-export const data = new SlashCommandBuilder()
-  .setName('claim')
-  .setDescription('Fordere das Einkommen deiner Windräder oder Solaranlagen ab.');
+const command = {
+  data: new SlashCommandBuilder()
+    .setName('claim')
+    .setDescription('Fordere das Einkommen deiner Windräder oder Solaranlagen ab.'),
+  async execute(interaction) {
+    const discordId = interaction.user.id;
 
-export async function execute(interaction) {
-  const discordId = interaction.user.id;
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('discord_id', discordId)
+      .single();
 
-  // Hole User-Daten
-  const { data: userData, error: userError } = await supabase
-    .from('users')
-    .select('id')
-    .eq('discord_id', discordId)
-    .single();
-
-  if (userError || !userData) {
-    return interaction.reply('Du bist nicht registriert.');
-  }
-
-  const userId = userData.id;
-
-  // Hole Asset-Daten (Windräder, Solaranlagen)
-  const { data: assetsData, error: assetsError } = await supabase
-    .from('assets')
-    .select('id, type, last_claim, income')
-    .eq('user_id', userId);
-
-  if (assetsError || !assetsData) {
-    return interaction.reply('Du hast keine Assets.');
-  }
-
-  let totalIncome = 0;
-  const now = new Date();
-
-  // Berechne, wie viel Einkommen der User bekommt
-  for (const asset of assetsData) {
-    const lastClaim = new Date(asset.last_claim);
-    const diff = now - lastClaim;
-
-    if (diff >= 6 * 60 * 60 * 1000) {  // 6 Stunden
-      totalIncome += asset.income;
-
-      // Aktualisiere das letzte Claim-Datum
-      await supabase
-        .from('assets')
-        .update({ last_claim: now.toISOString() })
-        .eq('id', asset.id);
+    if (userError || !userData) {
+      return interaction.reply('Du bist nicht registriert. Bitte registriere dich zuerst.');
     }
+
+    const userId = userData.id;
+
+    const { data: assetsData, error: assetsError } = await supabase
+      .from('assets')
+      .select('id, type, last_claim, income')
+      .eq('user_id', userId);
+
+    if (assetsError || !assetsData || assetsData.length === 0) {
+      return interaction.reply('Du hast keine Assets zum Abholen von Einkommen.');
+    }
+
+    let totalIncome = 0;
+    const now = new Date();
+
+    for (const asset of assetsData) {
+      const lastClaim = new Date(asset.last_claim);
+      const diff = now - lastClaim;
+
+      if (diff >= 6 * 60 * 60 * 1000) {
+        totalIncome += asset.income;
+
+        const { error: updateError } = await supabase
+          .from('assets')
+          .update({ last_claim: now.toISOString() })
+          .eq('id', asset.id);
+
+        if (updateError) {
+          return interaction.reply('Fehler beim Aktualisieren des Claim-Datums.');
+        }
+      }
+    }
+
+    if (totalIncome === 0) {
+      return interaction.reply('Es gibt kein Einkommen zu beanspruchen. Vielleicht hast du gerade erst abgerufen.');
+    }
+
+    const { data: walletData, error: walletError } = await supabase
+      .from('wallets')
+      .select('balance')
+      .eq('user_id', userId)
+      .single();
+
+    if (walletError || !walletData) {
+      return interaction.reply('Fehler beim Abrufen deines Wallets. Bitte versuche es später.');
+    }
+
+    const newBalance = walletData.balance + totalIncome;
+
+    const { error: updateWalletError } = await supabase
+      .from('wallets')
+      .update({ balance: newBalance })
+      .eq('user_id', userId);
+
+    if (updateWalletError) {
+      return interaction.reply('Fehler beim Hinzufügen des Einkommens zu deinem Wallet.');
+    }
+
+    await interaction.reply(`Du hast **${totalIncome} €** aus deinen Assets erhalten. Dein neuer Kontostand ist **${newBalance} €**.`);
   }
+};
 
-  if (totalIncome === 0) {
-    return interaction.reply('Es gibt kein Einkommen zu beanspruchen.');
-  }
-
-  // Füge das Einkommen zum Wallet des Benutzers hinzu
-  const { data: walletData, error: walletError } = await supabase
-    .from('wallets')
-    .select('balance')
-    .eq('user_id', userId)
-    .single();
-
-  if (walletError || !walletData) {
-    return interaction.reply('Fehler beim Abrufen des Wallets.');
-  }
-
-  const newBalance = walletData.balance + totalIncome;
-
-  // Aktualisiere das Wallet
-  await supabase
-    .from('wallets')
-    .update({ balance: newBalance })
-    .eq('user_id', userId);
-
-  await interaction.reply(`Du hast **${totalIncome} €** aus deinen Assets erhalten.`);
-}
+export default command;

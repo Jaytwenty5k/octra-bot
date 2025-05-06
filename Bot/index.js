@@ -1,4 +1,14 @@
-import { Client, Collection, GatewayIntentBits } from 'discord.js';
+import { Client, GatewayIntentBits, Collection } from 'discord.js';
+import pkg from 'discord.js';
+const {
+  SlashCommandBuilder,
+  MessageEmbed,
+  MessageButton,
+  ActionRowBuilder,
+  Guilds,
+  commandModule // Falls du Buttons verwendest
+} = pkg;
+import { supabase } from './src/utils/supabaseClient.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'url';
@@ -26,7 +36,7 @@ function loadCommands(dir) {
       import(filePath).then((commandModule) => {
         const command = commandModule.default || commandModule;
         if (command?.data?.name) {
-          client.commands.set(command.data.name, command);
+          client.commands.set(command.data.name,command);
         } else {
           console.warn(`Datei ${filePath} enthält kein gültiges Command.`);
         }
@@ -36,7 +46,7 @@ function loadCommands(dir) {
 }
 
 // Alle Befehle laden
-const commandsPath = path.join(__dirname, 'src/commands');
+const commandsPath = path.join(__dirname, 'src/commands/');
 loadCommands(commandsPath);
 
 client.once('ready', () => {

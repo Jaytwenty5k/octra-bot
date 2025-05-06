@@ -1,6 +1,6 @@
 // src/events/interactionCreate.js
 import { handleJobSelection } from '../modules/jobHandler.js';
-import { supabase } from '../supabase.js';
+import { supabase } from '../../utils/supabaseClient.js';
 
 export default {
   name: 'interactionCreate',

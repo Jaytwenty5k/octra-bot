@@ -1,22 +1,27 @@
-import { SlashCommandBuilder } from 'discord.js';
-import { supabase } from '../../supabase/supabase.js';
+import pkg from 'discord.js';
+const {
+  SlashCommandBuilder,
+  EmbedBuilder,
+} = pkg;
+import { supabase } from '../../utils/supabaseClient.js'; // Pfad ggf. anpassen
 
-export const data = new SlashCommandBuilder()
-  .setName('balance')
-  .setDescription('Zeigt deinen aktuellen Kontostand an.');
+const command = {
+  data: new SlashCommandBuilder()
+    .setName('balance')
+    .setDescription('Zeigt deinen aktuellen Kontostand an.'),
+  async execute(interaction) {
+    const discordId = interaction.user.id;
 
-export async function execute(interaction) {
-  const discordId = interaction.user.id;
-
-  // Hole user_id aus users
-  const { data: userData, error: userError } = await supabase
-    .from('users')
-    .select('id')
-    .eq('discord_id', discordId)
-    .single();
-
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('discord_id', discordId)
+      .single();
     let userId;
 
+    if (userError) {
+      return interaction.reply('Fehler beim Abrufen der Benutzerdaten.');
+    }
     if (!userData) {
       const { data: newUser, error: insertError } = await supabase
         .from('users')
@@ -27,34 +32,35 @@ export async function execute(interaction) {
         })
         .select('id')
         .single();
-    
       if (insertError) {
         return interaction.reply('Fehler beim Registrieren.');
       }
-    
       userId = newUser.id;
-    
-      // Wallet anlegen
-      await supabase.from('wallets').insert({
+
+      const { error: walletError } = await supabase.from('wallets').insert({
         user_id: userId,
         currency: '€',
         balance: 0,
       });
+      if (walletError) {
+        return interaction.reply('Fehler beim Erstellen des Wallets.');
+      }
     } else {
-      userId = userData.id; 
+      userId = userData.id;
     }
 
-  // Hole Wallet
-  const { data: walletData, error: walletError } = await supabase
-    .from('wallets')
-    .select('balance, currency')
-    .eq('user_id', userData.id)
-    .single();
+    const { data: walletData, error: walletError } = await supabase
+      .from('wallets')
+      .select('balance, currency')
+      .eq('user_id', userId)
+      .single();
+    if (walletError || !walletData) {
+      return interaction.reply('Kein Wallet gefunden.');
+    }
 
-  if (walletError || !walletData) {
-    return interaction.reply('Kein Wallet gefunden.');
-  }
+    const { balance, currency } = walletData;
+    await interaction.reply(`Dein Kontostand: **${balance} ${currency}**`);
+  },
+};
 
-  const { balance, currency } = walletData;
-  await interaction.reply(`Dein Kontostand: **${balance} ${currency}**`);
-}
+export default command;

@@ -1,35 +1,44 @@
 import { REST, Routes } from 'discord.js';
 import { config } from 'dotenv';
-import fs from 'node:fs';
-import path from 'node:path';
+import { readdirSync } from 'fs';
+import path from 'path';
 import { fileURLToPath } from 'url';
 
-config(); // Lädt .env
+config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const commands = [];
-const commandsPath = path.join(__dirname, 'Bot',  'commands');
-const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+const commandsPath = path.join(__dirname, 'src/commands');
 
-for (const file of commandFiles) {
-  const filePath = path.join(commandsPath, file);
-    const command = (await import(filePath)).default;
-      commands.push(command.data.toJSON());
-      }
+// Befehle aus Unterordnern laden
+const folderNames = readdirSync(commandsPath);
+for (const folder of folderNames) {
+  const commandFiles = readdirSync(path.join(commandsPath, folder)).filter(file => file.endsWith('.js'));
 
-      const rest = new REST().setToken(process.env.TOKEN);
+  for (const file of commandFiles) {
+    const filePath = path.join(commandsPath, folder, file);
+    const command = await import(`file://${filePath}`);
+    if (command.default && command.default.data) {
+      commands.push(command.default.data.toJSON());
+    } else {
+      console.warn(`[WARN] Datei ${filePath} enthält kein gültiges Command.`);
+    }
+  }
+}
 
-      try {
-        console.log('Lade Slash-Befehle hoch...');
+const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
-          await rest.put(
-              Routes.applicationCommands(process.env.CLIENT_ID),
-                  { body: commands },
-                    );
+try {
+  console.log(`Starte das Registrieren von ${commands.length} Slash-Command(s).`);
 
-                      console.log('Slash-Befehle erfolgreich hochgeladen!');
-                      } catch (error) {
-                        console.error(error);
-                        }
+  await rest.put(
+    Routes.applicationCommands(process.env.CLIENT_ID),
+    { body: commands },
+  );
+
+  console.log(`Erfolgreich ${commands.length} Slash-Command(s) registriert.`);
+} catch (error) {
+  console.error(error);
+}

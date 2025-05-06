@@ -1,3 +1,15 @@
+const { Client, GatewayIntentBits } = require('discord.js');
+import { Client, GatewayIntentBits } from 'discord.js';
+import pkg from 'discord.js';
+import { supabase } from '../../utils/supabaseClient.js';
+import './src/utils/loadCommands.js';
+const {
+  SlashCommandBuilder,
+    MessageEmbed,
+      MessageButton,
+        ActionRowBuilder,
+          EmbedBuilder // Falls du Buttons verwendest
+          } = pkg;
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton()) return;
 

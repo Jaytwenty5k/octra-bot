@@ -34,4 +34,4 @@ dein-projektordner/
 ├── deploy-commands.js              # Für Slash-Command-Deployment
 ├── .env                            # Bot-Token und Supabase-Zugangsdaten
 ├── package.json                    # NPM-Konfiguration
-├── README.md                       # Projektbeschreibung (optional)
+├── README.md                       # Projektbeschreibung (optional)1

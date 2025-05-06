@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { supabase } from '../utils/supabaseClient.js';
+import { supabase } from '../../utils/supabaseClient.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -9,22 +9,22 @@ export default {
   async execute(interaction) {
     const userId = interaction.user.id;
 
-    // Überprüfen, ob der Benutzer Windräder oder Solaranlagen hat
+    // Überprüfen, ob der Benutzer Windräder oder Solaranlagen besitzt
     const { data: userBuildings, error } = await supabase
       .from('user_buildings')
       .select('windmills, solar_panels')
       .eq('discord_id', userId)
       .single();
-
+    
     if (error || !userBuildings) {
       return interaction.reply({ content: 'Du besitzt keine Windräder oder Solaranlagen!', ephemeral: true });
     }
 
     const { windmills, solar_panels } = userBuildings;
-    
+
     let income = 0;
 
-    // Berechnen des Einkommens
+    // Berechne das Einkommen aus Windrädern und Solaranlagen
     if (windmills > 0) {
       income += windmills * 100; // Beispiel: 100 pro Windrad
     }
@@ -46,9 +46,9 @@ export default {
         return interaction.reply({ content: 'Fehler beim Hinzufügen des Einkommens.', ephemeral: true });
       }
 
-      interaction.reply({ content: `Du hast ${income} verdient!` });
+      return interaction.reply({ content: `Du hast **${income}** verdient!` });
     } else {
-      interaction.reply({ content: 'Du hast keine Einkommensquelle, die beansprucht werden kann.', ephemeral: true });
+      return interaction.reply({ content: 'Du hast keine Einkommensquelle, die beansprucht werden kann.', ephemeral: true });
     }
   },
 };
