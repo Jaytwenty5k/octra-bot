@@ -17,5 +17,22 @@
     "fund": "^1.0.0",
     "jsonwebtoken": "^9.0.2",
     "node-fetch": "^3.3.2"
-  }
+  },
+  "name": "octra-bot",
+  "version": "1.0.0",
+  "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
+  "directories": {
+    "doc": "docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jaytwenty5k/octra-bot.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Jaytwenty5k/octra-bot/issues"
+  },
+  "homepage": "https://github.com/Jaytwenty5k/octra-bot#readme"
 }
