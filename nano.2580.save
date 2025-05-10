@@ -1,0 +1,133 @@
+#!/bin/bash
+
+# Projektname
+PROJECT_NAME="octra-bot"
+
+# Überprüfen, ob Node.js installiert ist
+if ! command -v node &> /dev/null; then
+    echo "❌ Node.js ist nicht installiert. Bitte installiere es zuerst."
+    exit 1
+fi
+
+echo "🚀 Starte die Erstellung der Projektstruktur..."
+
+# Projektverzeichnis erstellen
+mkdir -p $PROJECT_NAME && cd $PROJECT_NAME
+echo "📂 Projektverzeichnis erstellt: $PROJECT_NAME"
+
+# Initialisiere ein npm-Projekt
+npm init -y
+echo "📝 npm-Projekt initialisiert."
+
+# Notwendige Pakete installieren
+npm install discord.js @supabase/supabase-js dotenv
+echo "📦 Pakete installiert: discord.js, supabase, dotenv"
+
+# Verzeichnisstruktur anlegen
+mkdir -p commands config database handlers logs
+echo "📁 Verzeichnisstruktur erstellt."
+
+# Beispiel-Umgebungsdatei
+cat <<EOF > .env
+DISCORD_TOKEN=dein_discord_token
+SUPABASE_URL=deine_supabase_url
+SUPABASE_KEY=dein_supabase_key
+EOF
+echo "🌐 .env-Datei erstellt."
+
+# Supabase-Datenbankverbindung
+cat <<EOF > database/supabase.js
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+dotenv.config();
+
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+console.log("✅ Verbindung zur Supabase-Datenbank hergestellt");
+
+export { supabase };
+EOF
+echo "🔗 Supabase-Datenbankintegration erstellt."
+
+# Hauptdatei erstellen
+cat <<EOF > index.js
+import fs from 'fs';
+import path from 'path';
+import { Client, Collection, GatewayIntentBits } from 'discord.js';
+import { supabase } from './database/supabase.js';
+import dotenv from 'dotenv';
+dotenv.config();
+
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+client.commands = new Collection();
+
+async function loadCommands() {
+    const commandsPath = path.join(process.cwd(), 'commands');
+    const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+    for (const file of commandFiles) {
+        const command = await import(\`file://\${path.join(commandsPath, file)}\`);
+        client.commands.set(command.data.name, command);
+        console.log(\`✅ Befehl \${command.data.name} geladen.\`);
+    }
+}
+
+client.on('interactionCreate', async interaction => {
+    if (!interaction.isCommand()) return;
+    const command = client.commands.get(interaction.commandName);
+    if (!command) return;
+    try {
+        await command.execute(interaction);
+    } catch (error) {
+        console.error(\`❌ Fehler beim Ausführen des Befehls: \${error.message}\`);
+        await interaction.reply({ content: 'Fehler beim Ausführen des Befehls.', ephemeral: true });
+    }
+});
+
+client.once('ready', () => {
+    console.log(\`✅ Bot ist online als \${client.user.tag}\`);
+});
+
+await loadCommands();
+client.login(process.env.DISCORD_TOKEN);
+EOF
+echo "📝 Hauptdatei (index.js) erstellt."
+
+# Beispielbefehl /register
+cat <<EOF > commands/register.js
+import { SlashCommandBuilder } from 'discord.js';
+import { supabase } from '../database/supabase.js';
+
+export const data = new SlashCommandBuilder()
+    .setName('register')
+    .setDescription('Registriere dich im System.');
+
+export async function execute(interaction) {
+    const userId = interaction.user.id;
+    const username = interaction.user.username;
+    const { data: existingUser } = await supabase
+        .from('users')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+    if (existingUser) {
+        return interaction.reply('✅ Du bist bereits registriert.');
+    }
+
+    const { error } = await supabase
+        .from('users')
+        .insert([{ user_id: userId, username: username, coins: 0 }]);
+
+    if (error) {
+        return interaction.reply('❌ Fehler beim Registrieren.');
+    }
+
+    return interaction.reply('🎉 Registrierung erfolgreich!');
+}
+EOF
+echo "📄 Beispielbefehl /register erstellt."
+
+# Start-Skript in package.json hinzufügen
+sed -i 's/"test": "echo \\"Error: no test specified\\" && exit 1"/"start": "node index.js"/' package.json
+echo "🚀 Start-Skript hinzugefügt."
+
+echo "✅ Projektstruktur erfolgreich erstellt!"
